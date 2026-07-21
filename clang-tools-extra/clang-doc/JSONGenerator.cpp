@@ -232,8 +232,12 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
 
   switch (I.Kind) {
   case CommentKind::CK_TextComment: {
-    if (!I.Text.empty())
-      Obj.insert({commentKindToString(I.Kind), I.Text});
+    if (!I.Text.empty()) {
+      if (LLVM_LIKELY(json::isUTF8(I.Text)))
+        Obj.insert({commentKindToString(I.Kind), I.Text});
+      else
+        Obj.insert({commentKindToString(I.Kind), json::fixUTF8(I.Text)});
+    }
     return Obj;
   }
 
@@ -257,8 +261,12 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
     json::Value ArgsArr = Array();
     auto &ARef = *ArgsArr.getAsArray();
     ARef.reserve(I.Args.size());
-    for (const auto &Arg : I.Args)
-      ARef.emplace_back(Arg);
+    for (const auto &Arg : I.Args) {
+      if (LLVM_LIKELY(json::isUTF8(Arg)))
+        ARef.emplace_back(Arg);
+      else
+        ARef.emplace_back(json::fixUTF8(Arg));
+    }
     Child.insert({"Command", I.Name});
     Child.insert({"Args", ArgsArr});
     Child.insert({"Children", ChildArr});
@@ -292,7 +300,10 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
 
   case CommentKind::CK_VerbatimBlockLineComment:
   case CommentKind::CK_VerbatimLineComment: {
-    Child.insert({"Text", I.Text});
+    if (LLVM_LIKELY(json::isUTF8(I.Text)))
+      Child.insert({"Text", I.Text});
+    else
+      Child.insert({"Text", json::fixUTF8(I.Text)});
     Child.insert({"Children", ChildArr});
     Obj.insert({commentKindToString(I.Kind), ChildVal});
     return Obj;
@@ -333,7 +344,10 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   }
 
   case CommentKind::CK_Unknown: {
-    Obj.insert({commentKindToString(I.Kind), I.Text});
+    if (LLVM_LIKELY(json::isUTF8(I.Text)))
+      Obj.insert({commentKindToString(I.Kind), I.Text});
+    else
+      Obj.insert({commentKindToString(I.Kind), json::fixUTF8(I.Text)});
     return Obj;
   }
   }
