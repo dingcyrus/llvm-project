@@ -1,2 +1,2 @@
-// bad: —
+// non-UTF-8: ï¿½
 class A {};
